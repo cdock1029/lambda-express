@@ -94,16 +94,8 @@ function mapEvent( event){
     return request;
 }
 
-exports.appHandler = function(appHandle) {
+exports.appHandler = function(app) {
     return function(event, context) {
-        var app;
-        // if we were passed a function, call it to get the app
-        if(Object.prototype.toString.call(appHandle) == '[object Function]') {
-            app = appHandle(event,context);
-        } else {
-            app = appHandle;
-        }
-
         var req = mapEvent(event);
         var res = new http.ServerResponse(req);
 
