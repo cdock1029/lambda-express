@@ -85,7 +85,8 @@ function mapEvent( event){
     delete request.queryString;
 
     var fake_sock = {
-        remoteAddress: event.remoteAddress
+        remoteAddress: event.remoteAddress,
+				destroy: () => { console.log('** fake_sock destroy()'); }
     };
 
     request.socket =  fake_sock;
@@ -119,4 +120,3 @@ exports.appHandler = function(app) {
         app.handle(req, res);
     };
 };
-
