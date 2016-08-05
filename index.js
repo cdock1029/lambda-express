@@ -96,15 +96,14 @@ exports.appHandler = app => (event, context) => {
 	res.end = function (chunk, encoding, callback) {
 		res.original_end(chunk, encoding, callback)
 		const statusCode = res.statusCode
-
-		const contentType = res.getHeader('content-type')
-		const payload = res.output[1].toString('base64')
-		const result = { payload, contentType }
+		const output = res.output[1]
 
 		if (statusCode > 399) {
-			context.fail(result)
+			context.fail(JSON.stringify(output))
 		} else {
-			context.succeed(result)
+			const contentType = res.getHeader('content-type')
+			const payload = output.toString('base64')
+			context.succeed({ payload, contentType })
 		}
 	}
 
