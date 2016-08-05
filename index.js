@@ -99,11 +99,12 @@ exports.appHandler = app => (event, context) => {
 
 		const contentType = res.getHeader('content-type')
 		const payload = res.output[1].toString('base64')
+		const result = { payload, contentType }
 
 		if (statusCode > 399) {
-			context.fail(JSON.stringify(res.output[1]))
+			context.fail(result)
 		} else {
-			context.succeed({ payload, contentType })
+			context.succeed(result)
 		}
 	}
 
