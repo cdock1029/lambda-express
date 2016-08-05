@@ -1,122 +1,111 @@
-var http = require('http')
-
+const http = require('http')
 
 
 /*
- * Split one of API Gateway's param strings into a real javascript object
- * @param {string} paramString Looks like {key1=val1, key2=val2}
- */
+* Split one of API Gateway's param strings into a real javascript object
+* @param {string} paramString Looks like {key1=val1, key2=val2}
+*/
 function parseParamString(paramString) {
-    var obj = {};
+	const obj = {}
 
-    if ( typeof paramString !== "undefined" ){
-        paramString
-            .substring(1, paramString.length - 1) //strip off { and }
-            .split(", ")
-            .forEach(function(keyVal) {
-                var pieces = keyVal.split("=");
-                var key = pieces[0],
-                    val = pieces[1];
+	if (typeof paramString !== 'undefined') {
+		paramString
+		.substring(1, paramString.length - 1) // strip off { and }
+		.split(', ')
+		.forEach(keyVal => {
+			const pieces = keyVal.split('=')
+			const key = pieces[0]
+			let val = pieces[1]
 
-                //Force "true" and "false" into Boolean
-                if (val === "true") val = true;
-                if (val === "false") val = false;
+			// Force 'true' and 'false' into Boolean
+			if (val === 'true') val = true
+			if (val === 'false') val = false
 
-                obj[key] = val;
-            });
-    }
+			obj[key] = val
+		})
+	}
 
-    return obj;
-};
+	return obj
+}
 
 
 /*
- * Generate a somewhat normal path
- */
-function reconstructUrl(path,request) {
+* Generate a somewhat normal path
+*/
+function reconstructUrl(pathParameter, request) {
+	let path = pathParameter
+	// Append query string
 
-    //Append query string
-    if (Object.keys(request.queryParams).length > 0) {
-        var str = [];
-        for (var p in request.queryParams) {
-            if (request.queryParams.hasOwnProperty(p) && p != '') {
-                str.push(p + "=" + request.queryParams[p]);
-            }
-        }
-        if ( str.length > 0 ){
-            path += "?" + str.join("&");
-        }
-    }
+	const str = []
 
-    //Fix path parameters
-    if (Object.keys(request.pathParams).length > 0) {
-        for (var param in request.pathParams) {
-            if (request.pathParams.hasOwnProperty(param)) {
-                var toReplace = "{" + param + "}";
-                path = path.replace(toReplace, request.pathParams[param]);
-            }
-        }
-    }
+	Object.keys(request.queryParams).forEach(p => {
+		if (p) str.push(`${p}=${request.queryParams[p]}`)
+	})
 
-    return path;
+	if (str.length) path += `?${str.join('&')}`
+
+	// Fix path parameters
+	Object.keys(request.pathParams).forEach(param => {
+		path = path.replace(`{${param}}`, request.pathParams[param])
+	})
+
+	return path
 }
-function mapEvent( event){
-    var request = {};
+function mapEvent(event) {
+	const request = {}
 
-    request.queryParams = {};
+	request.queryParams = {}
 
-    if (typeof event.queryString !== "undefined"){
-        request.queryParams = parseParamString(event.queryString);
-    }
+	if (typeof event.queryString !== 'undefined') {
+		request.queryParams = parseParamString(event.queryString)
+	}
 
-    if (typeof event.headers !== "undefined"){
-        request.headers = parseParamString(event.headers);
-        request.headers["user-agent"] = event["user-agent"];
+	if (typeof event.headers !== 'undefined') {
+		request.headers = parseParamString(event.headers)
+		request.headers['user-agent'] = event['user-agent']
 
-        request.headers["x-real-ip"] = event["source-ip"];
-        request.headers["host"] = event["api-id"]
-    }
-    request.pathParams = parseParamString(event.pathParams);
+		request.headers['x-real-ip'] = event['source-ip']
+		request.headers.host = event['api-id']
+	}
+	request.pathParams = parseParamString(event.pathParams)
 
-    request.method = event["http-method"];
-    request.url = reconstructUrl(event['resource-path'],request);
+	request.method = event['http-method']
+	request.url = reconstructUrl(event['resource-path'], request)
 
-    delete request.allParams;
-    delete request.queryString;
+	delete request.allParams
+	delete request.queryString
 
-    var fake_sock = {
-        remoteAddress: event.remoteAddress,
-				destroy: () => { console.log('** fake_sock destroy()'); }
-    };
+	const fakeSock = {
+		remoteAddress: event.remoteAddress,
+		destroy: () => { console.log('** fake_sock destroy()') },
+	}
 
-    request.socket =  fake_sock;
-    request.connection =  fake_sock;
+	request.socket = fakeSock
+	request.connection = fakeSock
 
-    return request;
+	return request
 }
 
-exports.appHandler = function(app) {
-    return function(event, context) {
-        var req = mapEvent(event);
-        var res = new http.ServerResponse(req);
+exports.appHandler = app => (event, context) => {
+	const req = mapEvent(event)
+	const res = new http.ServerResponse(req)
 
-        res.original_end = res.end;
-        res.end = function (chunk, encoding, callback) {
-            res.original_end(chunk, encoding, callback);
-            var statusCode = res.statusCode;
+	res.original_end = res.end
+	res.end = function (chunk, encoding, callback) {
+		res.original_end(chunk, encoding, callback)
+		const statusCode = res.statusCode
 
-            if (statusCode > 399) {
-                var err = new Error(statusCode);
-                context.fail(err);
-            } else {
-                var contentType = res.getHeader('content-type');
-                var payload = res.output[1].toString('base64');
+		if (statusCode > 399) {
+			const err = new Error(statusCode)
+			context.fail(JSON.stringify(err))
+		} else {
+			const contentType = res.getHeader('content-type')
+			const payload = res.output[1].toString('base64')
 
-                context.succeed({payload: payload, contentType: contentType});
-            }
-        };
+			context.succeed({ payload, contentType })
+		}
+	}
 
-        // setup and call express
-        app.handle(req, res);
-    };
-};
+	// setup and call express
+	app.handle(req, res)
+}
