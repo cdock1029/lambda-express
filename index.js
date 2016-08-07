@@ -89,6 +89,8 @@ function mapEvent(event) {
 }
 
 exports.appHandler = app => (event, context) => {
+	context.callbackWaitsForEmptyEventLoop = false
+
 	const req = mapEvent(event)
 	const res = new http.ServerResponse(req)
 
