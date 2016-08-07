@@ -94,7 +94,7 @@ const done = (err, req, res, next) => {
 		next(err)
 	} else {
 		console.log('*** handling with 500 error')
-		res.status(500).send({ message: err })
+		res.status(500).send({ message: err.toString() })
 	}
 }
 exports.appHandler = app => {
