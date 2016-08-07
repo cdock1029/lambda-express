@@ -87,42 +87,45 @@ function mapEvent(event) {
 
 	return request
 }
-const done = (err, reqst, resp, next) => {
+const done = (err, req, res, next) => {
 	console.log('*** final error handler ***')
-	if (resp.headersSent) {
+	if (res.headersSent) {
 		console.log('*** not handling - header already sent!')
 		next(err)
 	} else {
 		console.log('*** handling with 500 error')
-		resp.status(500).send({ message: err })
+		res.status(500).send({ message: err })
 	}
 }
-exports.appHandler = app => (event, context) => {
-	context.callbackWaitsForEmptyEventLoop = false
+exports.appHandler = app => {
+	app.use(done)
+	return (event, context) => {
+		context.callbackWaitsForEmptyEventLoop = false
 
-	const req = mapEvent(event)
-	const res = new http.ServerResponse(req)
+		const req = mapEvent(event)
+		const res = new http.ServerResponse(req)
 
-	res.original_end = res.end
-	res.end = function (chunk, encoding, callback) {
-		res.original_end(chunk, encoding, callback)
-		const statusCode = res.statusCode
-		const output = res.output[1]
+		res.original_end = res.end
+		res.end = function (chunk, encoding, callback) {
+			res.original_end(chunk, encoding, callback)
+			const statusCode = res.statusCode
+			const output = res.output[1]
 
-		if (statusCode === 302) {
-			const location = res.get('Location')
-			context.fail(location)
-		} else if (statusCode > 399) {
-			const outputString = output.toString('utf8')
-			const json = JSON.parse(outputString)
-			json.code = statusCode
-			context.fail(JSON.stringify(json))
-		} else {
-			const contentType = res.getHeader('content-type')
-			const payload = output.toString('base64')
-			context.succeed({ payload, contentType })
+			if (statusCode === 302) {
+				const location = res.get('Location')
+				context.fail(location)
+			} else if (statusCode > 399) {
+				const outputString = output.toString('utf8')
+				const json = JSON.parse(outputString)
+				json.code = statusCode
+				context.fail(JSON.stringify(json))
+			} else {
+				const contentType = res.getHeader('content-type')
+				const payload = output.toString('base64')
+				context.succeed({ payload, contentType })
+			}
 		}
+		// setup and call express
+		app.handle(req, res)
 	}
-	// setup and call express
-	app.handle(req, res, done)
 }
