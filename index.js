@@ -101,7 +101,7 @@ exports.appHandler = app => (event, context) => {
 		const output = res.output[1]
 
 		if (statusCode > 399) {
-			context.fail(output.toString('utf8'))
+			context.fail(output.toString('base64'))
 		} else {
 			const contentType = res.getHeader('content-type')
 			const payload = output.toString('base64')
