@@ -100,7 +100,11 @@ exports.appHandler = app => (event, context) => {
 		const statusCode = res.statusCode
 		const output = res.output[1]
 
-		if (statusCode > 399) {
+		if (statusCode === 302) {
+			const location = output.toString('utf8')
+			console.log('*** 302 location: ', location)
+			context.fail(location)
+		} else if (statusCode > 399) {
 			context.fail(output.toString('utf8'))
 		} else {
 			const contentType = res.getHeader('content-type')
