@@ -88,30 +88,41 @@ function mapEvent(event) {
 	return request
 }
 
-exports.appHandler = app => (event, context) => {
-	context.callbackWaitsForEmptyEventLoop = false
-
-	const req = mapEvent(event)
-	const res = new http.ServerResponse(req)
-
-	res.original_end = res.end
-	res.end = function (chunk, encoding, callback) {
-		res.original_end(chunk, encoding, callback)
-		const statusCode = res.statusCode
-		const output = res.output[1]
-
-		if (statusCode === 302) {
-			const location = res.get('Location')
-			context.fail(location)
-		} else if (statusCode > 399) {
-			context.fail(output.toString('utf8'))
+exports.appHandler = app => {
+	app.use((err, req, res, next) => {
+		console.log('*** final error handler ***')
+		if (res.headersSent) {
+			console.log('*** not handling - header already sent!')
+			next(err)
 		} else {
-			const contentType = res.getHeader('content-type')
-			const payload = output.toString('base64')
-			context.succeed({ payload, contentType })
+			console.log('*** handling with 500 error')
+			res.status(500).send({ message: `500: ${err}` })
 		}
-	}
+	})
+	return (event, context) => {
+		context.callbackWaitsForEmptyEventLoop = false
 
-	// setup and call express
-	app.handle(req, res)
+		const req = mapEvent(event)
+		const res = new http.ServerResponse(req)
+
+		res.original_end = res.end
+		res.end = function (chunk, encoding, callback) {
+			res.original_end(chunk, encoding, callback)
+			const statusCode = res.statusCode
+			const output = res.output[1]
+
+			if (statusCode === 302) {
+				const location = res.get('Location')
+				context.fail(location)
+			} else if (statusCode > 399) {
+				context.fail(output.toString('utf8'))
+			} else {
+				const contentType = res.getHeader('content-type')
+				const payload = output.toString('base64')
+				context.succeed({ payload, contentType })
+			}
+		}
+		// setup and call express
+		app.handle(req, res)
+	}
 }
