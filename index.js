@@ -56,26 +56,17 @@ function reconstructUrl(pathParameter, request) {
 function mapEvent(event) {
 	const request = {}
 
-	request.queryParams = {}
+	request.queryParams = event.queryParams
+	request.pathParams = event.pathParams
+	request.headers = event.headers
+	request.headers['user-agent'] = event['user-agent']
+	request.headers['x-real-ip'] = event['source-ip']
+	request.headers.host = event['api-id']
 
-	if (typeof event.queryString !== 'undefined') {
-		request.queryParams = parseParamString(event.queryString)
-	}
-
-	if (typeof event.headers !== 'undefined') {
-		request.headers = parseParamString(event.headers)
-		request.headers['user-agent'] = event['user-agent']
-
-		request.headers['x-real-ip'] = event['source-ip']
-		request.headers.host = event['api-id']
-	}
-	request.pathParams = parseParamString(event.pathParams)
-
-	request.method = event['http-method']
+	request.method = event.method
 	request.url = reconstructUrl(event['resource-path'], request)
 
 	delete request.allParams
-	delete request.queryString
 
 	const fakeSock = {
 		remoteAddress: event.remoteAddress,
