@@ -92,8 +92,11 @@ exports.appHandler = app => {
 	app.use(done)
 	return (event, context) => {
 		context.callbackWaitsForEmptyEventLoop = false
+		console.log(`** event=[${event}]\ncontext=[${context}]\n`)
 
 		const req = mapEvent(event)
+		console.log(`** req=[${req}]\n`)
+
 		const res = new http.ServerResponse(req)
 
 		res.original_end = res.end
