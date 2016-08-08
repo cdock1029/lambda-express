@@ -92,10 +92,15 @@ exports.appHandler = app => {
 	app.use(done)
 	return (event, context) => {
 		context.callbackWaitsForEmptyEventLoop = false
-		console.log(`** event=[${event}]\ncontext=[${context}]\n`)
+		console.log(`** event=[
+			${JSON.stringify(event, null, 2)}
+		],
+		context=[
+			${JSON.stringify(context, null, 2)}
+		]`)
 
 		const req = mapEvent(event)
-		console.log(`** req=[${req}]\n`)
+		// console.log(`** req=[${req}]\n`)
 
 		const res = new http.ServerResponse(req)
 
@@ -105,18 +110,27 @@ exports.appHandler = app => {
 			const statusCode = res.statusCode
 			const output = res.output[1]
 
+			console.log(res)
+			/* Object.keys(res).forEach((key, index) => {
+				console.log(`key: ${key}, value: ${res[key]}\n`)
+			}) */
+			const headers = res._headers
 			if (statusCode === 302) {
-				const location = res.get('Location')
-				context.fail(location)
+				// const location = res.get('Location')
+				context.fail(JSON.stringify({ headers }))
 			} else if (statusCode > 399) {
 				const outputString = output.toString('utf8')
 				const json = JSON.parse(outputString)
 				json.code = statusCode
+				json.headers = headers
 				context.fail(JSON.stringify(json))
 			} else {
-				const contentType = res.getHeader('content-type')
+				// const contentType = res.getHeader('content-type')
 				const payload = output.toString('base64')
-				context.succeed({ payload, contentType })
+				const result = {}
+				result.payload = payload
+				result.headers = headers
+				context.succeed(result)
 			}
 		}
 		// setup and call express
