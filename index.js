@@ -127,9 +127,7 @@ exports.appHandler = app => {
 			} else {
 				// const contentType = res.getHeader('content-type')
 				const payload = output.toString('base64')
-				const result = {}
-				result.payload = payload
-				result.headers = headers
+				const result = { payload, headers }
 				context.succeed(result)
 			}
 		}
